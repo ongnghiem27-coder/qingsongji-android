@@ -28,9 +28,13 @@ jobs:
           "$SDKMANAGER" "emulator" "system-images;android-35;google_apis;x86_64"
           echo no | "$AVMANAGER" create avd --force -n diary -k "system-images;android-35;google_apis;x86_64"
           sudo chmod 666 /dev/kvm
+          export QT_QPA_PLATFORM=offscreen
           emulator -avd diary -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 2048 -cores 2 > /tmp/emulator.log 2>&1 &
-          adb wait-for-device
-          for i in $(seq 1 120); do
+          EMULATOR_PID=$!
+          sleep 5
+          kill -0 "$EMULATOR_PID" || { cat /tmp/emulator.log; exit 1; }
+          timeout 120 adb wait-for-device
+          for i in $(seq 1 60); do
             if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then break; fi
             sleep 3
           done
@@ -39,7 +43,8 @@ jobs:
           adb install -r apk/qingsongji-1.2.0.apk
           python3 tests/smoke.py
       - name: Capture failure diagnostics
-        if: failure()
+        if: always()
         run: |
-          "$ANDROID_HOME/platform-tools/adb" logcat -d -s chromium AndroidRuntime > /tmp/native-errors.log || true
+          cat /tmp/emulator.log || true
+          timeout 10 "$ANDROID_HOME/platform-tools/adb" logcat -d -s chromium AndroidRuntime > /tmp/native-errors.log || true
           cat /tmp/native-errors.log
