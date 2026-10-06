@@ -11,7 +11,7 @@ javac -encoding UTF-8 -d build/classes src/com/qingsongji/diary/RecordStore.java
 java -cp build/classes RecordStoreTest
 "$BT/aapt2" compile --dir res -o build/resources
 "$BT/aapt2" link -o build/unsigned.apk --manifest AndroidManifest.xml -I "$PLATFORM" --min-sdk-version 26 --target-sdk-version 35 -A assets build/resources/*.flat
-javac -encoding UTF-8 -source 8 -target 8 -bootclasspath "$PLATFORM" -d build/classes src/com/qingsongji/diary/*.java
+javac -encoding UTF-8 --release 8 -classpath "$PLATFORM" -d build/classes src/com/qingsongji/diary/*.java
 find build/classes/com -name '*.class' -print0 | xargs -0 "$BT/d8" --min-api 26 --lib "$PLATFORM" --output build/dex
 (cd build/dex && zip -q ../unsigned.apk classes*.dex)
 "$BT/zipalign" -p -f 4 build/unsigned.apk build/aligned.apk

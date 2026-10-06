@@ -1,0 +1,45 @@
+name: Android APK smoke test
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Signed APK build run ID
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: qingsongji-apk
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.build_run }}
+          path: apk
+      - name: Boot Android and run native smoke test
+        run: |
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)
+          AVMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name avdmanager -type f | head -1)
+          "$SDKMANAGER" "emulator" "system-images;android-35;google_apis;x86_64"
+          echo no | "$AVMANAGER" create avd --force -n diary -k "system-images;android-35;google_apis;x86_64"
+          sudo chmod 666 /dev/kvm
+          emulator -avd diary -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -memory 2048 -cores 2 > /tmp/emulator.log 2>&1 &
+          adb wait-for-device
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then break; fi
+            sleep 3
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+          adb shell input keyevent 82
+          adb install -r apk/qingsongji-1.2.0.apk
+          python3 tests/smoke.py
+      - name: Capture failure diagnostics
+        if: failure()
+        run: |
+          "$ANDROID_HOME/platform-tools/adb" logcat -d -s chromium AndroidRuntime > /tmp/native-errors.log || true
+          cat /tmp/native-errors.log
