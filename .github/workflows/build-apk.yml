@@ -12,7 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Ensure SDK packages
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
       - name: Build and verify signed APK
         env:
           APK_SIGNING_STORE_B64: ${{ secrets.APK_SIGNING_STORE_B64 }}
