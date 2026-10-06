@@ -2,8 +2,14 @@ import subprocess,time,re,xml.etree.ElementTree as ET
 PACKAGE='com.qingsongji.diary'
 def adb(*args):return subprocess.check_output(['adb',*args],text=True)
 def tree():
- adb('shell','uiautomator','dump','/sdcard/diary-ui.xml')
- return ET.fromstring(adb('shell','cat','/sdcard/diary-ui.xml'))
+ for attempt in range(6):
+  try:
+   adb('shell','rm','-f','/sdcard/diary-ui.xml')
+   adb('shell','uiautomator','dump','/sdcard/diary-ui.xml')
+   return ET.fromstring(adb('shell','cat','/sdcard/diary-ui.xml'))
+  except (subprocess.CalledProcessError,ET.ParseError):
+   time.sleep(2)
+ raise AssertionError('Android accessibility tree did not become available')
 def find(label):
  for attempt in range(12):
   root=tree()
