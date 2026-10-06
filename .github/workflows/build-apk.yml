@@ -1,0 +1,27 @@
+name: Build signed APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure SDK packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Build and verify signed APK
+        env:
+          APK_SIGNING_STORE_B64: ${{ secrets.APK_SIGNING_STORE_B64 }}
+          APK_STORE_PASSWORD: ${{ secrets.APK_STORE_PASSWORD }}
+        run: bash build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qingsongji-apk
+          path: |
+            build/qingsongji-1.2.0.apk
+            build/SHA256SUMS
+          retention-days: 30
