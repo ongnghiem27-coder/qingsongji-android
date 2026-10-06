@@ -26,7 +26,10 @@ adb('shell','am','start','-n',PACKAGE+'/.MainActivity');time.sleep(6)
 find('记一次小便');tap('记一次小便');find('保存记录');tap('保存记录');find('小便')
 adb('shell','am','force-stop',PACKAGE);adb('shell','am','start','-n',PACKAGE+'/.MainActivity');time.sleep(5)
 find('小便');find('1')
-tap('我的');find('安卓 APP');find('1 条记录');tap('从备份恢复');time.sleep(2)
+tap('我的');find('安卓 APP');find('数据与备份')
+sections=[node for node in tree().iter('node') if any(child.get('text')=='数据与备份' for child in node)]
+assert any({'1','条记录'} <= {child.get('text','').strip() for child in node} for node in sections), 'Saved record count was not retained'
+tap('从备份恢复');time.sleep(2)
 active=[line for line in adb('shell','dumpsys','activity','activities').splitlines() if 'topResumedActivity=' in line or 'mResumedActivity:' in line]
 assert any('documentsui' in line for line in active), 'System file picker did not open: '+str(active)
 adb('shell','input','keyevent','4');time.sleep(2);find('安卓 APP')
